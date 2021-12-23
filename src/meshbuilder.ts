@@ -8,7 +8,7 @@ export class MeshBuilder {
   // faces: Array<number>;
 
   constructor() {
-
+    this.verticies = new Array();
   }
   build(out: BufferGeometry) {
     out.setAttribute(
@@ -135,12 +135,12 @@ export class MeshBuilder {
       up = cy + radius;
       down = cy - radius;
     } else {
-      north = diameter;
-      south = 0;
-      east = diameter;
-      west = 0;
-      up = diameter;
-      down = 0;
+      north = cz + diameter;
+      south = cz;
+      east = cx + diameter;
+      west = cx;
+      up = cy + diameter;
+      down = cy;
     }
 
     /**UP quad*/

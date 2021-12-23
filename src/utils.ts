@@ -31,3 +31,15 @@ export function setXYZ (out: XYZ, x: number = 0, y: number = 0, z: number = 0) {
   out.y = y;
   out.z = z;
 }
+export function isEqualXYZ (a: XYZ, b: XYZ): boolean {
+  if (!a || !b) return false;
+  if (a === b) return true;
+  return (
+    a.x === b.x &&
+    a.y === b.y &&
+    a.z === b.z
+  );
+}
+export function logXYZ (a: XYZ): string {
+  return `[XYZ ${a.x},${a.y},${a.z}]`;
+}

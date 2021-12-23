@@ -2,7 +2,7 @@
 import { BufferGeometry, Material, Mesh, MeshNormalMaterial, Object3D, Vector3 } from "three";
 import { Block } from "./block";
 import { MeshBuilder } from "./meshbuilder";
-import { XYZ, copyXYZ, addXYZ, floorXYZ, createXYZ, setXYZ } from "./utils";
+import { XYZ, createXYZ, setXYZ } from "./utils";
 
 export interface MeshDisplay {
   geometry: BufferGeometry;
@@ -12,6 +12,18 @@ export interface MeshDisplay {
 
 export interface MultiMeshDisplay {
   [key: string]: MeshDisplay;
+}
+
+export function createMeshDisplay (): MeshDisplay {
+  let geometry = new BufferGeometry();
+  let material = new MeshNormalMaterial();
+  let mesh = new Mesh(geometry, material);
+
+  return {
+    geometry,
+    material,
+    mesh
+  };
 }
 
 export class Chunk extends Object3D {
@@ -48,6 +60,8 @@ export class Chunk extends Object3D {
 
   display: MultiMeshDisplay;
 
+  needsRender: boolean;
+
   constructor() {
     super();
 
@@ -60,19 +74,13 @@ export class Chunk extends Object3D {
     this.meshBuilder = new MeshBuilder();
 
     this.display = {
-      solid: {
-        geometry: new BufferGeometry(),
-        material: new MeshNormalMaterial(),
-        mesh: new Mesh(this.display.solid.geometry, this.display.solid.material)
-      },
-      water: {
-        geometry: new BufferGeometry(),
-        material: new MeshNormalMaterial(),
-        mesh: new Mesh(this.display.water.geometry, this.display.water.material)
-      }
+      solid: createMeshDisplay(),
+      water: createMeshDisplay()
     }
     this.add(this.display.solid.mesh);
     this.add(this.display.water.mesh);
+
+    this.needsRender = false;
   }
   /**Populate block with data from the chunk
    * 
@@ -95,12 +103,21 @@ export class Chunk extends Object3D {
   setBlockOOP(block: Block, position?: XYZ) {
     if (position) block.position.setFromChunkPositionOOP(this, position);
     block.writeToChunk(this);
+    this.needsRender = true;
   }
-  setBlock (block: Block, x?: number, y?: number, z?: number) {
+  setBlock(block: Block, x?: number, y?: number, z?: number) {
     if (x !== undefined) block.position.setFromChunkPosition(this, x, y, z);
     block.writeToChunk(this);
+    this.needsRender = true;
+  }
+  tryRender() {
+    if (this.needsRender) {
+      this.render();
+      this.needsRender = false;
+    }
   }
   render() {
+    // console.log("rendering chunk from data", this);
     this.meshBuilder.clear();
     for (let ix = 0; ix < Chunk.WIDTH; ix++) {
       for (let iy = 0; iy < Chunk.HEIGHT; iy++) {
@@ -114,6 +131,7 @@ export class Chunk extends Object3D {
       }
     }
     this.meshBuilder.build(this.display.solid.geometry);
+    console.log(this.display.solid.geometry.attributes.position);
   }
   sort() {
 
@@ -137,15 +155,19 @@ export class Chunk extends Object3D {
     return Math.floor(this.position.z / Chunk.DEPTH);
   }
   generate() {
+    let b = new Block();
     for (let i = 0; i < Chunk.BLOCKCOUNT; i++) {
-
+      b.position.blockIndex = i;
+      b.type = Math.floor( Math.random() * 3 );
+      console.log("setting block, transparent:", b.isTransparent());
+      this.setBlock(b);
     }
   }
 }
 
-Chunk.WIDTH = 16;
-Chunk.HEIGHT = 16;
-Chunk.DEPTH = 16;
+Chunk.WIDTH = 8;
+Chunk.HEIGHT = 8;
+Chunk.DEPTH = 8;
 
 Chunk.BLOCKCOUNT = Chunk.WIDTH * Chunk.HEIGHT * Chunk.DEPTH;
 

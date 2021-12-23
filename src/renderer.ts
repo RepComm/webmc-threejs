@@ -16,11 +16,14 @@ export class Renderer extends Exponent {
 
   world: World;
 
-  constructor () {
+  constructor() {
     super();
 
     this.world = new World();
-    this.world.loadChunkIndex(0,0,0);
+    this.world.loadChunkIndex(0, 0, 0);
+
+    this.scene = new Scene();
+    this.scene.add(this.world);
 
     this.needsRender = true;
 
@@ -33,16 +36,15 @@ export class Renderer extends Exponent {
     this.applyRootClasses();
     this.addClasses("exponent-canvas");
 
-    window.addEventListener("resize", ()=>{
+    window.addEventListener("resize", () => {
       this.adjustSize();
     });
 
-    setTimeout(()=>{
+    setTimeout(() => {
       this.adjustSize();
     }, 100);
 
-    this.renderCallback = ()=>{
-
+    this.renderCallback = () => {
       if (this.needsRender) this.render();
 
       requestAnimationFrame(this.renderCallback);
@@ -50,23 +52,33 @@ export class Renderer extends Exponent {
 
     requestAnimationFrame(this.renderCallback);
   }
-  adjustSize () {
+  adjustSize() {
     this.renderer.setSize(
       this.rect.width,
       this.rect.height,
-       false
+      false
     );
   }
-  render () {
-    if (!this.scene || !this.camera) return;
+  render() {
+    if (!this.scene || !this.camera) {
+      throw `scene or camera missing`;
+      return;
+    }
+
+    if (this.world) {
+      for (let c of this.world.renderedChunks) {
+        if (c.needsRender) c.tryRender();
+      }
+    }
+
     this.needsRender = false;
     this.renderer.render(this.scene, this.camera);
   }
-  setCamera (camera: Camera): this {
+  setCamera(camera: Camera): this {
     this.camera = camera;
     return this;
   }
-  setScene (scene: Scene): this {
+  setScene(scene: Scene): this {
     this.scene = scene;
     return this;
   }
