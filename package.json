@@ -33,5 +33,11 @@
       "transform-class-properties",
       "@babel/plugin-transform-runtime"
     ]
+  },
+  "dependencies": {
+    "@repcomm/exponent-ts": "^1.1.9",
+    "@repcomm/gameinput-ts": "^1.10.4",
+    "@types/three": "^0.135.0",
+    "three": "^0.135.0"
   }
 }
