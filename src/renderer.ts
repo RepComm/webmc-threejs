@@ -1,6 +1,6 @@
 
 import { Exponent } from "@repcomm/exponent-ts";
-import { Camera, Scene, Vector3, WebGLRenderer } from "three";
+import { AmbientLight, Camera, DirectionalLight, PerspectiveCamera, Scene, Vector3, WebGLRenderer } from "three";
 import { World } from "./world";
 
 export class Renderer extends Exponent {
@@ -8,7 +8,7 @@ export class Renderer extends Exponent {
 
   renderer: WebGLRenderer;
   scene: Scene;
-  camera: Camera;
+  camera: PerspectiveCamera;
 
   renderCallback: FrameRequestCallback;
 
@@ -24,6 +24,14 @@ export class Renderer extends Exponent {
 
     this.scene = new Scene();
     this.scene.add(this.world);
+
+    let sun = new DirectionalLight(0xffffff, 0.9);
+    this.scene.add(sun);
+    sun.target.translateX(10);
+    sun.target.translateY(10);
+    
+    let ambient = new AmbientLight(0xffffff, 0.2);
+    this.scene.add(ambient);
 
     this.needsRender = true;
 
@@ -58,6 +66,12 @@ export class Renderer extends Exponent {
       this.rect.height,
       false
     );
+    if (this.camera) {
+      console.log("adjusting aspect");
+      this.camera.aspect = this.rect.width / this.rect.height;
+      this.camera.updateProjectionMatrix();
+      
+    }
   }
   render() {
     if (!this.scene || !this.camera) {
@@ -74,7 +88,7 @@ export class Renderer extends Exponent {
     this.needsRender = false;
     this.renderer.render(this.scene, this.camera);
   }
-  setCamera(camera: Camera): this {
+  setCamera(camera: PerspectiveCamera): this {
     this.camera = camera;
     return this;
   }

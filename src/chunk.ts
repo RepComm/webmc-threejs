@@ -1,5 +1,5 @@
 
-import { BufferGeometry, Material, Mesh, MeshNormalMaterial, Object3D, Vector3 } from "three";
+import { BufferGeometry, Material, Mesh, MeshDepthMaterial, MeshDistanceMaterial, MeshNormalMaterial, MeshPhysicalMaterial, MeshStandardMaterial, MeshToonMaterial, Object3D, Vector3 } from "three";
 import { Block } from "./block";
 import { MeshBuilder } from "./meshbuilder";
 import { XYZ, createXYZ, setXYZ } from "./utils";
@@ -14,9 +14,13 @@ export interface MultiMeshDisplay {
   [key: string]: MeshDisplay;
 }
 
-export function createMeshDisplay (): MeshDisplay {
+export function createMeshDisplay(): MeshDisplay {
   let geometry = new BufferGeometry();
-  let material = new MeshNormalMaterial();
+  // let material = new MeshNormalMaterial({
+  //   wireframe: true,
+  //   wireframeLinewidth: 2
+  // });
+  let material = new MeshStandardMaterial();
   let mesh = new Mesh(geometry, material);
 
   return {
@@ -49,9 +53,21 @@ export class Chunk extends Object3D {
       Math.floor(z) * Chunk.WIDTH * Chunk.DEPTH
     );
   }
+  static isPositionBounded(x: number, y: number, z: number): boolean {
+    return (
+      x > -1 && x < Chunk.WIDTH &&
+      y > -1 && y < Chunk.HEIGHT &&
+      z > -1 && z < Chunk.DEPTH
+    );
+  }
+  static isPositionBoundedOOP(xyz: XYZ): boolean {
+    return Chunk.isPositionBounded(xyz.x, xyz.y, xyz.z);
+  }
 
   block: Block;
   blockPosition: XYZ;
+  neighborBlock: Block;
+  neighborBlockPosition: XYZ;
 
   data: ArrayBuffer;
   view: DataView;
@@ -71,6 +87,9 @@ export class Chunk extends Object3D {
     this.block = new Block();
     this.blockPosition = createXYZ();
 
+    this.neighborBlock = new Block();
+    this.neighborBlockPosition = createXYZ();
+
     this.meshBuilder = new MeshBuilder();
 
     this.display = {
@@ -88,13 +107,54 @@ export class Chunk extends Object3D {
    * Otherwise, reads is performed from block.position.dataIndex
    * 
    */
-  getBlockOOP(block: Block, position?: XYZ) {
+  getBlockOOP(block: Block, position?: XYZ, checkNeighbors: boolean = true) {
     if (position) block.position.setFromChunkPositionOOP(this, position, true);
     block.readFromChunk(this);
+    if (checkNeighbors) this.calcBlockNeighborData(block, position.x, position.y, position.z);
   }
-  getBlock(block: Block, x?: number, y?: number, z?: number) {
+  calcBlockNeighborData(block: Block, x: number, y: number, z: number) {
+    /**
+     * +Y = UP
+     * -Y = DOWN
+     * +Z = NORTH
+     * -Z = SOUTH
+     * +X = EAST
+     * -X = WEST
+     */
+    if (Chunk.isPositionBounded(x, y + 1, z)) {
+      this.getBlock(this.neighborBlock, x, y + 1, z, false);
+      block.sides.up = this.neighborBlock.isTransparent();
+    }
+
+    if (Chunk.isPositionBounded(x, y - 1, z)) {
+      this.getBlock(this.neighborBlock, x, y - 1, z, false);
+      block.sides.down = this.neighborBlock.isTransparent();
+    }
+
+    if (Chunk.isPositionBounded(x, y, z + 1)) {
+      this.getBlock(this.neighborBlock, x, y, z + 1, false);
+      block.sides.north = this.neighborBlock.isTransparent();
+    }
+
+    if (Chunk.isPositionBounded(x, y, z - 1)) {
+      this.getBlock(this.neighborBlock, x, y, z - 1, false);
+      block.sides.south = this.neighborBlock.isTransparent();
+    }
+
+    if (Chunk.isPositionBounded(x + 1, y, z)) {
+      this.getBlock(this.neighborBlock, x + 1, y, z, false);
+      block.sides.east = this.neighborBlock.isTransparent();
+    }
+
+    if (Chunk.isPositionBounded(x - 1, y, z)) {
+      this.getBlock(this.neighborBlock, x - 1, y, z, false);
+      block.sides.west = this.neighborBlock.isTransparent();
+    }
+  }
+  getBlock(block: Block, x?: number, y?: number, z?: number, checkNeighbors: boolean = true) {
     if (x !== undefined) block.position.setFromChunkPosition(this, x, y, z, true);
     block.readFromChunk(this);
+    if (checkNeighbors) this.calcBlockNeighborData(block, x, y, z);
   }
   /**Writes to block.position.dataIndex
    * 
@@ -131,7 +191,7 @@ export class Chunk extends Object3D {
       }
     }
     this.meshBuilder.build(this.display.solid.geometry);
-    console.log(this.display.solid.geometry.attributes.position);
+    // console.log(this.display.solid.geometry.attributes.position);
   }
   sort() {
 
@@ -158,8 +218,12 @@ export class Chunk extends Object3D {
     let b = new Block();
     for (let i = 0; i < Chunk.BLOCKCOUNT; i++) {
       b.position.blockIndex = i;
-      b.type = Math.floor( Math.random() * 3 );
-      console.log("setting block, transparent:", b.isTransparent());
+      b.type = Math.floor(Math.random() * 3);
+      b.shape = Math.floor(Math.random() * 3);
+      b.variant = 255;
+      b.variant = Math.floor(Math.random() * 255);
+
+      console.log("set block", b.type);
       this.setBlock(b);
     }
   }

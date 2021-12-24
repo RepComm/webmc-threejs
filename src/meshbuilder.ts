@@ -113,13 +113,21 @@ export class MeshBuilder {
    */
   cube(
     cx: number, cy: number, cz: number,
-    radius: number,
+    rx: number, ry: number, rz: number,
     n: boolean, s: boolean,
     e: boolean, w: boolean,
     u: boolean, d: boolean,
     center: boolean = false
   ) {
-    let diameter = radius * 2;
+    /**
+     * +Y = UP
+     * -Y = DOWN
+     * +Z = NORTH
+     * -Z = SOUTH
+     * +X = EAST
+     * -X = WEST
+     */
+    
     let north: number;
     let south: number;
     let east: number;
@@ -128,18 +136,18 @@ export class MeshBuilder {
     let down: number;
 
     if (center) {
-      north = cz + radius;
-      south = cz - radius;
-      east = cx + radius;
-      west = cx - radius;
-      up = cy + radius;
-      down = cy - radius;
+      north = cz + rz;
+      south = cz - rz;
+      east = cx + rx;
+      west = cx - rx;
+      up = cy + ry;
+      down = cy - ry;
     } else {
-      north = cz + diameter;
+      north = cz + (rz*2);
       south = cz;
-      east = cx + diameter;
+      east = cx + (rx*2);
       west = cx;
-      up = cy + diameter;
+      up = cy + (ry*2);
       down = cy;
     }
 
@@ -213,13 +221,13 @@ export class MeshBuilder {
    */
   cubeOOP(
     c: XYZ,
-    radius: number,
+    radius: XYZ,
     sides: CubeSidesShown,
     center: boolean = false
   ) {
     this.cube(
       c.x, c.y, c.z,
-      radius,
+      radius.x, radius.y, radius.z,
       sides.north,
       sides.south,
       sides.east,

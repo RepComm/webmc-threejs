@@ -101,12 +101,53 @@ export class BlockPosition {
   }
 }
 
+export enum BlockType {
+  AIR,
+  STONE,
+  DIRT,
+  GRASS,
+
+}
+
+/**Block.data0*/
+export enum BlockShape {
+  BLOCK,
+  STAIR,
+  SLAB,
+  RAMP,
+}
+/**Block.data1*/
+export type BlockVariant = number;
+
+export enum VariantBlockFacing {
+  NORTH,
+  SOUTH,
+  EAST,
+  WEST
+}
+export enum ModifierBlockFacing {
+  UPRIGHT,
+  SIDEWAYS,
+  UPSIDEDOWN
+}
+
+export enum VariantSlabPlacement {
+  TOP,
+  MIDDLE,
+  BOTTOM
+}
+export enum ModifierSlabPlacement {
+  UPRIGHT,
+  NORTHSOUTH,
+  EASTWEST
+}
+
 export class Block {
   static BYTELENGTH: number;
 
-  type: number;
-  data0: number;
-  data1: number;
+  type: BlockType;
+  data0: BlockShape;
+  data1: BlockVariant;
 
   chunk: Chunk;
   world: World;
@@ -115,10 +156,13 @@ export class Block {
 
   sides: CubeSidesShown;
 
+  renderCubeSize: XYZ;
+  renderCubePos: XYZ;
+
   constructor() {
     this.position = new BlockPosition();
-    this.type = 0;
-    this.data0 = 0;
+    this.type = BlockType.AIR;
+    this.data0 = BlockShape.BLOCK;
     this.data1 = 0;
     this.chunk = null;
     this.world = null;
@@ -130,7 +174,20 @@ export class Block {
       up: true,
       down: true
     };
-
+    this.renderCubeSize = createXYZ();
+    this.renderCubePos = createXYZ();
+  }
+  get shape (): BlockShape {
+    return this.data0;
+  }
+  set shape (s: BlockShape) {
+    this.data0 = s;
+  }
+  get variant (): BlockVariant {
+    return this.data1;
+  }
+  set variant (v: BlockVariant) {
+    this.data1 = v;
   }
   /**Reads from current dataIndex
    * 
@@ -150,7 +207,7 @@ export class Block {
     this.data0 = view.getUint8(idx);
 
     idx++;
-    this.data0 = view.getUint8(idx);
+    this.data1 = view.getUint8(idx);
   }
   writeToChunk(chunk: Chunk) {
     this.writeToData(chunk.view);
@@ -166,15 +223,66 @@ export class Block {
     view.setUint8(idx, this.data1);
   }
   isTransparent(): boolean {
-    return this.type === 0; //TODO - add other checks for transparency here
+    switch (this.type) {
+      case BlockType.AIR:
+        return true;
+      default:
+        break;
+    }
+    switch (this.shape) {
+      case BlockShape.BLOCK:
+        return this.variant !== 255;
+      case BlockShape.SLAB:
+      case BlockShape.STAIR:
+        return true;
+      default:
+        break;
+    }
+    return false;
   }
   render(meshBuilder: MeshBuilder) {
     // console.log(this, this.position.chunkspace);
 
-    if (this.type === 0) return;
-    meshBuilder.cubeOOP(
-      this.position.chunkspace, 0.5, this.sides
-    );
+    if (this.type === BlockType.AIR) return;
+
+    //TODO - set texture from type
+    // console.log("Shape", this.shape);
+    //subtype
+    switch (this.shape) {
+      case BlockShape.BLOCK:
+        setXYZ( this.renderCubeSize, 0.5, (this.variant / 512), 0.5 );
+
+        meshBuilder.cubeOOP(
+          this.position.chunkspace, this.renderCubeSize, this.sides, false
+        );
+        break;
+      case BlockShape.STAIR:
+        switch (this.variant) {
+          case 0:
+            break;
+        }
+        //top
+        setXYZ( this.renderCubeSize, 0.5, 0.5, 0.25 );
+        meshBuilder.cubeOOP (this.position.chunkspace, this.renderCubeSize, this.sides, false);
+        
+        //bottom
+        copyXYZ ( this.position.chunkspace, this.renderCubePos );
+        this.renderCubePos.z += 0.5;
+
+        setXYZ( this.renderCubeSize, 0.5, 0.25, 0.25 );
+        meshBuilder.cubeOOP (this.renderCubePos, this.renderCubeSize, this.sides, false);
+        
+        break;
+      case BlockShape.SLAB:
+        setXYZ( this.renderCubeSize, 0.5, 0.25, 0.5 );
+        meshBuilder.cubeOOP (this.position.chunkspace, this.renderCubeSize, this.sides, false);
+        
+        break;
+      case BlockShape.RAMP:
+
+        break;
+    }
+
   }
 }
 Block.BYTELENGTH = 3; //[0] type [1] extra1 [2] extra2

@@ -20,7 +20,7 @@ async function main () {
   .mount(container);
 
   let freecam = new FreeCamera();
-  renderer.camera = freecam.getCamera();
+  renderer.camera = freecam.getCamera() as PerspectiveCamera;
   renderer.scene.add(freecam);
 
   let input = GameInput.get();
@@ -56,17 +56,17 @@ async function main () {
   });
 
   setInterval(()=>{
+    freecam.addRotationInput(
+      input.getAxisValue("horizontal"),
+      input.getAxisValue("vertical")
+    );
+
+    freecam.addMovementInput(
+      input.getAxisValue("forward"),
+      input.getAxisValue("strafe")
+    );
 
     if (input.raw.pointerIsLocked()) {
-      freecam.addRotationInput(
-        input.getAxisValue("horizontal"),
-        input.getAxisValue("vertical")
-      );
-  
-      freecam.addMovementInput(
-        input.getAxisValue("forward"),
-        input.getAxisValue("strafe")
-      );
     } else {
       if (input.raw.getPointerButton(0)) {
         input.raw.pointerTryLock(renderer.element);
