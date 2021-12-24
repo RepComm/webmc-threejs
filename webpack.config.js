@@ -10,7 +10,8 @@ module.exports = {
     new CopyWebpackPlugin({
       patterns: [
         { from: 'src/index.html', to: 'index.html' },
-        { from: 'src/index.css', to: 'index.css' }
+        { from: 'src/index.css', to: 'index.css' },
+        { from: 'src/textures', to: 'textures' }
       ],
     })
   ],

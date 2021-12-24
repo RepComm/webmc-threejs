@@ -1,8 +1,10 @@
-import { Vector3 } from "three";
 
-export interface XYZ {
+export interface XY {
   x: number;
   y: number;
+}
+
+export interface XYZ extends XY {
   z: number;
 }
 
