@@ -17,5 +17,8 @@ This is the result of that realization.
 
 ## Implemented
 - WebGL renderer
-- World
-- Chunk
+- World - renders chunks
+- Chunk - renders blocks
+- Block - accesses block data from chunks
+- AtlasBuilder - generate texture atlas / uvs / block mappings automagically from individual block face pngs
+- Atlas - single material/texture and block UVs mappings for rendering

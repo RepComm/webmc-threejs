@@ -1,12 +1,14 @@
 
-import { Object3D } from "three";
+import { Material, MeshBasicMaterial, MeshStandardMaterial, Object3D, TextureLoader } from "three";
 import { AltasBuilder, Atlas } from "./atlas";
-import { Block, BlockTextureSlot, BlockType, VariantBlockFacing } from "./block";
+import { Block } from "./block";
+import { BlockTextureSlot, BlockType } from "./blockdef";
 import { Chunk } from "./chunk";
 import { logXYZ, XYZ } from "./utils";
 
 export class World extends Object3D {
   atlas: Atlas;
+  chunkMaterial: Material;
 
   chunkPool: Array<Chunk>;
   renderedChunks: Array<Chunk>;
@@ -17,31 +19,44 @@ export class World extends Object3D {
     super();
     this.renderedChunks = new Array();
     this.chunkPool = new Array();
-    this.init();
   }
   async init() {
     let atlasBuilder = new AltasBuilder();
     atlasBuilder.init({
       faceSize: { x: 16, y: 16 },
-      width: 256,
-      height: 256
+      width: 16*4,
+      height: 16//*4
     });
+
+    await atlasBuilder.loadTexture(
+      "./textures/block-unknown.png",
+      BlockType.UNKNOWN, BlockTextureSlot.MAIN
+    );
+
     await atlasBuilder.loadTexture(
       "./textures/block-stone.png",
-      0, 0//BlockTextureSlot.MAIN
+      BlockType.STONE, BlockTextureSlot.MAIN
     );
 
     await atlasBuilder.loadTexture(
       "./textures/block-grass-top.png",
-      3, 0
+      BlockType.GRASS, BlockTextureSlot.UP
     );
     await atlasBuilder.loadTexture(
       "./textures/block-grass-side.png",
-      3, 1
+      BlockType.GRASS, BlockTextureSlot.SIDE
     );
+    
+    this.atlas = await atlasBuilder.build();
+    
+    console.log("Loaded atlas", this.atlas, this.atlas.texture);
+    // let loader = new TextureLoader();
+    // let texture = await loader.loadAsync("./textures/block-dirt.png");
 
-    this.atlas = atlasBuilder.build();
-    console.log("Loaded atlas", this.atlas);
+    this.chunkMaterial = new MeshStandardMaterial({
+      map: this.atlas.texture,
+      // map: texture
+    });
   }
   sortRenderedChunks() {
 
@@ -61,7 +76,8 @@ export class World extends Object3D {
     if (this.chunkPool.length > 0) {
       return this.chunkPool.pop();
     } else {
-      return new Chunk();
+      return new Chunk(this);
+
     }
   }
   loadChunkIndex(chunkX: number, chunkY: number, chunkZ: number) {

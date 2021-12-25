@@ -1,4 +1,6 @@
 
+import type { BlockUVs, UVQuad } from "./atlas";
+import { BlockType, BlockShape, BlockVariant, BlockTextureSlot } from "./blockdef";
 import { Chunk } from "./chunk";
 import { MeshBuilder } from "./meshbuilder";
 import { addXYZ, copyXYZ, createXYZ, setXYZ, XYZ } from "./utils";
@@ -101,56 +103,6 @@ export class BlockPosition {
   }
 }
 
-export enum BlockType {
-  AIR,
-  STONE,
-  DIRT,
-  GRASS,
-
-}
-
-/**Block.data0*/
-export enum BlockShape {
-  BLOCK,
-  STAIR,
-  SLAB,
-  RAMP,
-}
-/**Block.data1*/
-export type BlockVariant = number;
-
-export enum VariantBlockFacing {
-  NORTH,
-  SOUTH,
-  EAST,
-  WEST
-}
-export enum ModifierBlockFacing {
-  UPRIGHT,
-  SIDEWAYS,
-  UPSIDEDOWN
-}
-
-export enum VariantSlabPlacement {
-  TOP,
-  MIDDLE,
-  BOTTOM
-}
-export enum ModifierSlabPlacement {
-  UPRIGHT,
-  NORTHSOUTH,
-  EASTWEST
-}
-
-export const BlockTextureSlot = {
-  TOP: 0, MAIN: 0,
-  SIDE: 1, NORTH: 1,
-  SOUTH: 2,
-  EAST: 3,
-  WEST: 4,
-  DOWN: 5,
-}
-
 export class Block {
   static BYTELENGTH: number;
 
@@ -203,6 +155,7 @@ export class Block {
    * @param chunk 
    */
   readFromChunk(chunk: Chunk) {
+    this.chunk = chunk;
     this.readFromData(chunk.view);
   }
   /**Reads from current dataIndex
@@ -249,14 +202,23 @@ export class Block {
     }
     return false;
   }
-  render(meshBuilder: MeshBuilder) {
-    // console.log(this, this.position.chunkspace);
+  getSlotUVQuad (slotid: number): UVQuad {
+    let blockuvs: BlockUVs = this.chunk.world.atlas.type[this.type];
+    let uvquad: UVQuad;
 
+    if (!blockuvs) {
+      blockuvs = this.chunk.world.atlas.type[BlockType.UNKNOWN];
+      uvquad = blockuvs[BlockTextureSlot.MAIN];
+      return uvquad;
+    }
+
+    uvquad = blockuvs[slotid];
+    if (!uvquad) slotid = BlockTextureSlot.MAIN;
+    return blockuvs[slotid]; //may still be undefined / null
+  }
+  render(meshBuilder: MeshBuilder) {
     if (this.type === BlockType.AIR) return;
 
-    //TODO - set texture from type
-    // console.log("Shape", this.shape);
-    //subtype
     switch (this.shape) {
       case BlockShape.BLOCK:
         setXYZ(this.renderCubeSize, 0.5, (this.variant / 512), 0.5);
@@ -264,6 +226,16 @@ export class Block {
         meshBuilder.cubeOOP(
           this.position.chunkspace, this.renderCubeSize, this.sides, false
         );
+        meshBuilder.uvCubeOOP(
+          this.sides,
+          this.getSlotUVQuad(BlockTextureSlot.NORTH),
+          this.getSlotUVQuad(BlockTextureSlot.SOUTH),
+          this.getSlotUVQuad(BlockTextureSlot.EAST),
+          this.getSlotUVQuad(BlockTextureSlot.WEST),
+          this.getSlotUVQuad(BlockTextureSlot.UP),
+          this.getSlotUVQuad(BlockTextureSlot.DOWN)
+        );
+        
         break;
       case BlockShape.STAIR:
         switch (this.variant) {
@@ -274,6 +246,16 @@ export class Block {
         setXYZ(this.renderCubeSize, 0.5, 0.5, 0.25);
         meshBuilder.cubeOOP(this.position.chunkspace, this.renderCubeSize, this.sides, false);
 
+        meshBuilder.uvCubeOOP(
+          this.sides,
+          this.getSlotUVQuad(BlockTextureSlot.NORTH),
+          this.getSlotUVQuad(BlockTextureSlot.SOUTH),
+          this.getSlotUVQuad(BlockTextureSlot.EAST),
+          this.getSlotUVQuad(BlockTextureSlot.WEST),
+          this.getSlotUVQuad(BlockTextureSlot.UP),
+          this.getSlotUVQuad(BlockTextureSlot.DOWN)
+        );
+
         //bottom
         copyXYZ(this.position.chunkspace, this.renderCubePos);
         this.renderCubePos.z += 0.5;
@@ -281,10 +263,30 @@ export class Block {
         setXYZ(this.renderCubeSize, 0.5, 0.25, 0.25);
         meshBuilder.cubeOOP(this.renderCubePos, this.renderCubeSize, this.sides, false);
 
+        meshBuilder.uvCubeOOP(
+          this.sides,
+          this.getSlotUVQuad(BlockTextureSlot.NORTH),
+          this.getSlotUVQuad(BlockTextureSlot.SOUTH),
+          this.getSlotUVQuad(BlockTextureSlot.EAST),
+          this.getSlotUVQuad(BlockTextureSlot.WEST),
+          this.getSlotUVQuad(BlockTextureSlot.UP),
+          this.getSlotUVQuad(BlockTextureSlot.DOWN)
+        );
+
         break;
       case BlockShape.SLAB:
         setXYZ(this.renderCubeSize, 0.5, 0.25, 0.5);
         meshBuilder.cubeOOP(this.position.chunkspace, this.renderCubeSize, this.sides, false);
+
+        meshBuilder.uvCubeOOP(
+          this.sides,
+          this.getSlotUVQuad(BlockTextureSlot.NORTH),
+          this.getSlotUVQuad(BlockTextureSlot.SOUTH),
+          this.getSlotUVQuad(BlockTextureSlot.EAST),
+          this.getSlotUVQuad(BlockTextureSlot.WEST),
+          this.getSlotUVQuad(BlockTextureSlot.UP),
+          this.getSlotUVQuad(BlockTextureSlot.DOWN)
+        );
 
         break;
       case BlockShape.RAMP:

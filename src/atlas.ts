@@ -1,7 +1,7 @@
 
-import { BlockType, VariantBlockFacing } from "./block";
-import { CanvasTexture, NearestFilter, RepeatWrapping, Texture, UVMapping } from "three";
+import { CanvasTexture, LinearMipmapLinearFilter, NearestFilter, RepeatWrapping, Texture, TextureLoader, UVMapping } from "three";
 import { XY } from "./utils";
+import { VariantBlockFacing, BlockType } from "./blockdef";
 
 /**UV Quad from the texture atlas
  * All coordinates are in normalized 0..1 space
@@ -33,6 +33,8 @@ export interface AtlasConfig {
   height: number;
 }
 
+let textureLoader = new TextureLoader();
+
 export class AltasBuilder {
   atlas: Atlas;
   canvas: HTMLCanvasElement;
@@ -44,6 +46,7 @@ export class AltasBuilder {
   constructor() {
     this.canvas = document.createElement("canvas");
     this.ctx = this.canvas.getContext("2d");
+    
     this.usedHeight = 0;
     this.usedWidth = 0;
   }
@@ -67,13 +70,6 @@ export class AltasBuilder {
     let uv = this.atlas.type[type];
     if (!uv) uv = this.atlas.type[type] = {};
 
-    if (this.usedWidth >= this.config.width) {
-      this.usedWidth = 0;
-      this.usedHeight += this.config.faceSize.y;
-    }
-
-    if (this.usedHeight >= this.config.height) throw `No more room on atlas, consider using a larger atlas, or smaller faceSize`;
-    
     let slot = uv[slotid] as UVQuad;
     if (!slot) slot = uv[slotid] = {
       x: 0, y: 0, w: 0, h: 0
@@ -83,6 +79,12 @@ export class AltasBuilder {
     slot.w = this.xToU ( this.config.faceSize.x );
     slot.h = this.yToV (this.config.faceSize.y );
     
+    if (this.usedWidth >= this.config.width) {
+      this.usedWidth = 0;
+      this.usedHeight += this.config.faceSize.y;
+    }
+
+    if (this.usedHeight >= this.config.height) throw `No more room on atlas, consider using a larger atlas, or smaller faceSize`;
     this.usedWidth += this.config.faceSize.x;
 
     slot.src = texture;
@@ -130,6 +132,9 @@ export class AltasBuilder {
     let slotid: number;
     let quad: UVQuad;
 
+    this.ctx.fillStyle = "red";
+    this.ctx.fillRect(0, 0, this.config.width, this.config.height);
+
     for (let typeidn in this.atlas.type) {
       typeid = parseInt(typeidn);
       uvConfig = this.atlas.type[typeid] as BlockUVs;
@@ -149,22 +154,26 @@ export class AltasBuilder {
       }
     }
   }
-  build(): Atlas {
-    this.setCanvasActivation(true);
-
-    this.render();
-
-    //create texture from canvas
-    this.atlas.texture = new CanvasTexture(
-      this.canvas,
-      UVMapping,
-      RepeatWrapping,
-      RepeatWrapping,
-      NearestFilter,
-      NearestFilter
-    );
-
-    this.setCanvasActivation(false);
-    return this.atlas;
+  build(): Promise<Atlas> {
+    return new Promise(async (_resolve, _reject)=>{
+      try {
+        this.setCanvasActivation(true);
+        
+        this.render();
+        
+        let dataUrl = this.canvas.toDataURL();
+  
+        this.atlas.texture = await textureLoader.loadAsync(dataUrl);
+        this.atlas.texture.minFilter = NearestFilter;
+        this.atlas.texture.magFilter = NearestFilter;
+  
+        this.setCanvasActivation(false);
+        _resolve( this.atlas );
+      } catch (ex) {
+        console.warn(ex);
+        _reject(ex);
+        return;
+      }
+    });
   }
 }

@@ -1,6 +1,6 @@
 
 import { Exponent } from "@repcomm/exponent-ts";
-import { AmbientLight, Camera, DirectionalLight, PerspectiveCamera, Scene, Vector3, WebGLRenderer } from "three";
+import { AmbientLight, Camera, Color, DirectionalLight, PerspectiveCamera, Scene, Vector3, WebGLRenderer } from "three";
 import { World } from "./world";
 
 export class Renderer extends Exponent {
@@ -20,7 +20,9 @@ export class Renderer extends Exponent {
     super();
 
     this.world = new World();
-    this.world.loadChunkIndex(0, 0, 0);
+    this.world.init().then(()=>{
+      this.world.loadChunkIndex(0, 0, 0);
+    })
 
     this.scene = new Scene();
     this.scene.add(this.world);
@@ -30,14 +32,15 @@ export class Renderer extends Exponent {
     sun.target.translateX(10);
     sun.target.translateY(10);
     
-    let ambient = new AmbientLight(0xffffff, 0.2);
+    let ambient = new AmbientLight(0xffffff, 0.9);
     this.scene.add(ambient);
 
     this.needsRender = true;
 
     this.renderer = new WebGLRenderer({
-      alpha: false
+      alpha: false,
     });
+    this.renderer.setClearColor(0x121212);
 
     this.useNative(this.renderer.domElement);
 

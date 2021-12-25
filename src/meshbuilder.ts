@@ -1,14 +1,17 @@
 
 import { BufferGeometry, Float32BufferAttribute } from "three";
+import { UVQuad } from "./atlas";
 import { CubeSidesShown } from "./block";
 import { XYZ } from "./utils";
 
 export class MeshBuilder {
   verticies: Array<number>;
+  uvs: Array<number>;
   // faces: Array<number>;
 
   constructor() {
     this.verticies = new Array();
+    this.uvs = new Array();
   }
   build(out: BufferGeometry) {
     out.setAttribute(
@@ -17,16 +20,25 @@ export class MeshBuilder {
         this.verticies, 3
       )
     );
+    out.setAttribute(
+      "uv",
+      new Float32BufferAttribute(this.uvs, 2)
+    );
+    
     out.computeVertexNormals();
   }
   clearVerticies() {
     this.verticies.length = 0;
+  }
+  clearUVs () {
+    this.uvs.length = 0;
   }
   // clearFaces () {
   //   this.faces.length = 0;
   // }
   clear() {
     this.clearVerticies();
+    this.clearUVs();
     // this.clearFaces();
   }
   polygon(...verticies: Array<number>) {
@@ -40,6 +52,10 @@ export class MeshBuilder {
     // }
 
     this.verticies.push(...verticies);
+  }
+  uvPolygon(...uvs: Array<number>) {
+    if (uvs.length % 2 !== 0) throw `uv vert count is not a multiple of 2!`;
+    this.uvs.push(...uvs);
   }
   /**Clockwise triangle
    * 0----1
@@ -235,6 +251,67 @@ export class MeshBuilder {
       sides.up,
       sides.down,
       center
+    );
+  }
+  uvCubeOOP (
+    sides: CubeSidesShown,
+    north: UVQuad,
+    south?: UVQuad,
+    east?: UVQuad,
+    west?: UVQuad,
+    up?: UVQuad,
+    down?: UVQuad
+    ) {
+    if (!south) south = north;
+    if (!east) east = north;
+    if (!west) west = north;
+    if (!up) up = north;
+    if (!down) down = north;
+
+    if (sides.north) this.uvQuadOOP(north);
+    if (sides.south) this.uvQuadOOP(south);
+    if (sides.east) this.uvQuadOOP(east);
+    if (sides.west) this.uvQuadOOP(west);
+    if (sides.up) this.uvQuadOOP(up);
+    if (sides.down) this.uvQuadOOP(down);
+  }
+  uvTri (
+    x0: number, y0: number,
+    x1: number, y1: number,
+    x2: number, y2: number) {
+      this.uvPolygon(
+        x0, y0,
+        x1, y1,
+        x2, y2
+      )
+  }
+  uvQuad (
+    x0: number, y0: number,
+    x1: number, y1: number,
+    x2: number, y2: number,
+    x3: number, y3: number
+  ) {
+    this.uvPolygon(
+      x0, y0,
+      x1, y1,
+      x3, y3,
+
+      x1, y1,
+      x2, y2,
+      x3, y3
+    );
+  }
+  uvQuadOOP (uvquad: UVQuad) {
+    let top = uvquad.y;
+    let left = uvquad.x;
+    let bottom = uvquad.y + uvquad.h;
+    let right = uvquad.x + uvquad.w;
+
+    this.uvQuad(
+      left, top,
+      right, top,
+      right, bottom,
+      left, bottom
     );
   }
 }

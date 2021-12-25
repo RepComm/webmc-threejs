@@ -1,8 +1,10 @@
 
 import { BufferGeometry, Material, Mesh, MeshDepthMaterial, MeshDistanceMaterial, MeshNormalMaterial, MeshPhysicalMaterial, MeshStandardMaterial, MeshToonMaterial, Object3D, Vector3 } from "three";
 import { Block } from "./block";
+import { BlockShape, BlockType } from "./blockdef";
 import { MeshBuilder } from "./meshbuilder";
 import { XYZ, createXYZ, setXYZ } from "./utils";
+import { World } from "./world";
 
 export interface MeshDisplay {
   geometry: BufferGeometry;
@@ -14,14 +16,14 @@ export interface MultiMeshDisplay {
   [key: string]: MeshDisplay;
 }
 
-export function createMeshDisplay(): MeshDisplay {
-  let geometry = new BufferGeometry();
-  // let material = new MeshNormalMaterial({
-  //   wireframe: true,
-  //   wireframeLinewidth: 2
-  // });
-  let material = new MeshStandardMaterial();
-  let mesh = new Mesh(geometry, material);
+export function createMeshDisplay(
+  geometry?: BufferGeometry,
+  material?: Material,
+  mesh?: Mesh
+  ): MeshDisplay {
+  if (!geometry) geometry = new BufferGeometry();
+  if (!material) material = new MeshStandardMaterial();
+  if (!mesh) mesh = new Mesh(geometry, material);
 
   return {
     geometry,
@@ -64,6 +66,8 @@ export class Chunk extends Object3D {
     return Chunk.isPositionBounded(xyz.x, xyz.y, xyz.z);
   }
 
+  world: World;
+
   block: Block;
   blockPosition: XYZ;
   neighborBlock: Block;
@@ -78,8 +82,9 @@ export class Chunk extends Object3D {
 
   needsRender: boolean;
 
-  constructor() {
+  constructor(world: World) {
     super();
+    this.setWorld(world);
 
     this.data = new ArrayBuffer(Chunk.BYTELENGTH);
     this.view = new DataView(this.data);
@@ -92,14 +97,20 @@ export class Chunk extends Object3D {
 
     this.meshBuilder = new MeshBuilder();
 
+    console.log(this.world.chunkMaterial);
+
     this.display = {
-      solid: createMeshDisplay(),
-      water: createMeshDisplay()
+      solid: createMeshDisplay(undefined, this.world.chunkMaterial, undefined),
+      water: createMeshDisplay(undefined, this.world.chunkMaterial, undefined)
     }
     this.add(this.display.solid.mesh);
     this.add(this.display.water.mesh);
 
     this.needsRender = false;
+  }
+  setWorld (w: World): this {
+    this.world = w;
+    return this;
   }
   /**Populate block with data from the chunk
    * 
@@ -219,11 +230,12 @@ export class Chunk extends Object3D {
     for (let i = 0; i < Chunk.BLOCKCOUNT; i++) {
       b.position.blockIndex = i;
       b.type = Math.floor(Math.random() * 3);
+
       b.shape = Math.floor(Math.random() * 3);
       b.variant = 255;
-      b.variant = Math.floor(Math.random() * 255);
+      // b.variant = Math.floor(Math.random() * 255);
 
-      console.log("set block", b.type);
+      // console.log("set block", b.type);
       this.setBlock(b);
     }
   }
